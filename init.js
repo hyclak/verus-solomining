@@ -7,7 +7,7 @@ const logging = require('./lib/modules/logging.js');
 const PoolWorker = require('./lib/workers/poolWorker.js');
 const CliListener = require('./lib/workers/cliListener.js');
 
-var config = (process.argv[3] ? require(`./${process.argv[3]}_config.json`) : require('./config.json'));
+var config = (process.argv[2] ? require(`./${process.argv[2]}_config.json`) : require('./config.json'));
 var coinFilePath = `coins/${config.coin}`;
 
 if (!fs.existsSync(coinFilePath))
