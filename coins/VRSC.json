@@ -2,5 +2,6 @@
     "name": "Verus",
     "symbol": "VRSC",
     "peerMagic": "ad8a58e2",
+    "peerTls": true,
     "txfee": 0.0001
 }
