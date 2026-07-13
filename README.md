@@ -97,13 +97,17 @@ Fixes made in this fork to get VRSC working, for anyone adapting this to another
   at the same position) puts it at `process.argv[2]`. `argv[3]` was never populated, so
   `VRSC_config.json` (or any `<SYMBOL>_config.json`) could never actually be selected — it
   silently always fell back to the default `config.json`. Changed to `argv[2]`.
-* **Known unresolved risk**: VRSC coinbase transactions include a `"cryptocondition"`-type
-  vout (its reserve-currency/feepool mechanism) alongside the miner payout. `createGeneration`'s
-  `switch` on `scriptPubKey.type` has no case for `"cryptocondition"` and falls through to the
-  `default` case, which rebuilds it as a plain P2PKH output rather than the
-  `OP_CHECKCRYPTOCONDITION` script consensus likely requires there. Its value has been `0` in
-  testing so far, so this hasn't surfaced as a rejected block/share yet — but if `submitblock`
-  starts failing, this is the first place to look.
+* **`lib/stratum/transactions.js` `createGeneration` cryptocondition vout**: VRSC coinbase
+  transactions include a `"cryptocondition"`-type vout (its reserve-currency/feepool mechanism)
+  alongside the miner payout. `createGeneration`'s `switch` on `scriptPubKey.type` had no case
+  for `"cryptocondition"`, so it fell through to `default`, which rebuilds the output from
+  `scriptPubKey.addresses[0]` as a plain P2PKH script — not meaningful for an
+  `OP_CHECKCRYPTOCONDITION` output, since its semantics come from embedded condition data, not
+  an address. Added an explicit case that reproduces `scriptPubKey.hex` verbatim instead: this is
+  the daemon's own `getblocktemplate`-proposed coinbase, so the script it already decoded is by
+  definition the consensus-valid one — nothing to rebuild. Untested against an actual non-zero
+  cryptocondition payout (it's been `0` in testing so far), so still worth a first look if
+  `submitblock` ever starts failing.
 
 Differences between this and Z-NOMP
 ------------
