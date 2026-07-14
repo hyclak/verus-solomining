@@ -70,6 +70,12 @@
                 </div>
             </div>
             <br><br><br>
+            <h3>Pool Hashrate</h3>
+            <hr>
+            <div class="row justify-content-md-center">
+                <div class="col-md-6" id="poolhashrate"></div>
+            </div>
+            <br><br><br>
             <h3>Mining Stats</h3>
             <hr>
             <div class="row">

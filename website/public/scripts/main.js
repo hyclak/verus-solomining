@@ -1,5 +1,65 @@
 const args = document.currentScript.dataset.args.split(',');
-document.addEventListener("DOMContentLoaded", function(){ blocks(done) });
+document.addEventListener("DOMContentLoaded", function(){ blocks(done); poolHashrate(done); });
+
+// Mirrors lib/stratum/util.js's getReadableHashRateString - kept separate
+// since that module isn't loaded client-side.
+function readableHashrate(hashrate) {
+    var i = -1;
+    var units = [' KSol/s', ' MSol/s', ' GSol/s', ' TSol/s', ' PSol/s'];
+    do {
+        hashrate = hashrate / 1024;
+        i++;
+    } while (hashrate > 1024);
+    return hashrate.toFixed(2) + units[i];
+}
+
+function poolHashrate(cback)
+{
+    httpRequest("/hashrate.json", function(err, json) {
+        if (err) { cback("poolHashrate() failed: " + err); return; }
+        var hashrates = JSON.parse(json); //Sample: {"worker.rig1":123456,"worker.rig2":78900}
+        var workers = Object.keys(hashrates);
+        var total = workers.reduce(function(sum, w) { return sum + hashrates[w]; }, 0);
+
+        var container = document.getElementById('poolhashrate');
+
+        var totalP = document.createElement('p');
+        totalP.innerHTML = '<strong>Total: ' + readableHashrate(total) + '</strong>';
+        container.appendChild(totalP);
+
+        if (workers.length) {
+            var table = document.createElement('table'),
+                thead = document.createElement('thead'),
+                tbody = document.createElement('tbody');
+            table.className = 'table table-hover table-striped';
+
+            var theadTR = document.createElement('tr');
+            var theadTH1 = document.createElement('th');
+            var theadTH2 = document.createElement('th');
+            theadTH1.appendChild(document.createTextNode('Worker'));
+            theadTH2.appendChild(document.createTextNode('Hashrate'));
+            theadTR.appendChild(theadTH1);
+            theadTR.appendChild(theadTH2);
+            thead.appendChild(theadTR);
+            table.appendChild(thead);
+
+            workers.forEach(function(w) {
+                var row = document.createElement('tr');
+                var cell1 = document.createElement('td');
+                var cell2 = document.createElement('td');
+                cell1.appendChild(document.createTextNode(w));
+                cell2.appendChild(document.createTextNode(readableHashrate(hashrates[w])));
+                row.appendChild(cell1);
+                row.appendChild(cell2);
+                tbody.appendChild(row);
+            });
+            table.appendChild(tbody);
+            container.appendChild(table);
+        }
+
+        cback("poolHashrate() rendered " + workers.length + " worker(s)");
+    });
+}
 
 function blocks(cback)
 {
