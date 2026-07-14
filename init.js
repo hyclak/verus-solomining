@@ -53,8 +53,13 @@ function spawnPoolWorkers()
         worker.forkId = forkId;
         worker.type = 'pool';
         poolWorkers[forkId] = worker;
+        worker.on('message', (msg) => {
+            if (msg && msg.type === 'hashrateUpdate') { recordForkHashrates(forkId, msg.hashrates); }
+        });
         worker.on('exit', (code, signal) => {
             logging('Pool', 'error', `Fork ${forkId} died, spawning replacement worker...`, forkId)
+            delete hashratesByFork[forkId];
+            writeHashrateSnapshot();
             setTimeout(() => { createPoolWorker(forkId); }, 2000);
         });
     }
@@ -121,6 +126,40 @@ function createEmptyLogs()
             throw err;
         }
     }
+    try {
+        fs.readFileSync(`./logs/${config.coin.symbol}_hashrate.json`)
+    } catch (err) {
+        if (err.code === "ENOENT") {
+            fs.writeFileSync(`./logs/${config.coin.symbol}_hashrate.json`, '{}');
+        } else {
+            throw err;
+        }
+    }
+}
+
+// Per-worker hashrate, combined across pool forks (each fork only knows
+// about the workers connected to it). Written to disk the same way blocks
+// are, so the website worker (a separate cluster process, no shared memory)
+// can serve it without needing a database.
+var hashratesByFork = {};
+
+function recordForkHashrates(forkId, hashrates)
+{
+    hashratesByFork[forkId] = hashrates;
+    writeHashrateSnapshot();
+}
+
+function writeHashrateSnapshot()
+{
+    var combined = {};
+    Object.keys(hashratesByFork).forEach((forkId) => {
+        Object.keys(hashratesByFork[forkId]).forEach((worker) => {
+            combined[worker] = (combined[worker] || 0) + hashratesByFork[forkId][worker];
+        });
+    });
+    fs.writeFile(`./logs/${config.coin.symbol}_hashrate.json`, JSON.stringify(combined), (err) => {
+        if (err) { logging('Master', 'error', err); }
+    });
 }
 
 (function init(){
